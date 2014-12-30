@@ -26,7 +26,7 @@ class GraphServiceImpl extends GraphService {
 
   override def findOntologyById(id: UUID): Option[Ontology] = {
     val ontologies: List[String ~ String] = {
-      Cypher( s"MATCH (n:Ontology {id:'$id'}) return n.id, n.name")
+      Cypher(s"MATCH (n:Ontology {id:'$id'}) return n.id, n.name")
         .as(str("n.id") ~ str("n.name") *)
     }
     if (ontologies.length > 0) {
@@ -37,7 +37,7 @@ class GraphServiceImpl extends GraphService {
 
   override def findOntologyByName(name: String): Option[Ontology] = {
     val ontologies: List[String ~ String] = {
-      Cypher( s"MATCH (n:Ontology {name:'$name'}) return n.id, n.name")
+      Cypher(s"MATCH (n:Ontology {name:'$name'}) return n.id, n.name")
         .as(str("n.id") ~ str("n.name") *)
     }
     if (ontologies.length > 0) {
@@ -46,15 +46,16 @@ class GraphServiceImpl extends GraphService {
     } else None
   }
 
-  def addAudit(id:UUID, name:String, notation:String) = {
-    val auditId=UUID.randomUUID()
-    val now=System.currentTimeMillis()
+  def addAudit(id: UUID, name: String, notation: String) = {
+    val auditId = UUID.randomUUID()
+    val now = System.currentTimeMillis()
 
-    Cypher(s"create (n:Audit { id:'$auditId', modifiedBy:'$name', notation:'$notation', timestamp:'$now'})").execute()
+    Cypher(s"create (n:Audit { id:'$auditId', modifiedBy:'$name', notation:'$notation', timestamp:timestamp()})")
+      .execute()
     Cypher(s"match (n),(a:Audit) where n.id='$id' and (a.id='$auditId') create (n)-[r:AUDIT]->(a)").execute()
   }
 
-  override def createOntology(name: String, username:String): Option[Ontology] = {
+  override def createOntology(name: String, username: String): Option[Ontology] = {
     val ontology = findOntologyByName(name)
     ontology match {
       case Some(o) => ontology
@@ -68,4 +69,28 @@ class GraphServiceImpl extends GraphService {
     }
   }
 
+  override def updateOntology(ontology: Ontology, username: String): Option[Ontology] = {
+    ontology.id match {
+      case Some(f) =>
+        Cypher("match (n:Ontology { id:'" + ontology.id.get + "'}) set n.name='" + ontology.name + "' return n").execute()
+        addAudit(ontology.id.get, username, "update")
+        findOntologyById(ontology.id.get)
+      case None => throw new Exception("Empty ontology id passed to updateOntology")
+    }
+  }
+
+  override def removeOntology(ontology: Ontology, username: String): Option[Ontology] = {
+    ontology.id match {
+      case Some(f) =>
+        Cypher("match (n:Ontology { id:'" + ontology.id.get + "'})-[r]-() delete n,r")
+          .execute()
+        Option(ontology)
+      case None => throw new Exception("Empty ontology id passed to removeOntology")
+    }
+  }
+
+  override def findOntologyNames(): Set[String] = {
+    Set() ++ Cypher(s"MATCH (n:Ontology ) return n.name")
+      .as(str("n.name") *)
+  }
 }

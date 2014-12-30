@@ -11,6 +11,10 @@ object TestThing {
     val ontology=service.createOntology("test ontology", "Joseph Ottinger")
     println(ontology)
     println(service.findOntologyByName("test ontology"))
+    ontology.get.setName("my ontology")
+    println(ontology)
+    println(service.updateOntology(ontology.get, "Joseph Schmoo"))
+    println(service.findOntologyNames())
   }
 
 }
