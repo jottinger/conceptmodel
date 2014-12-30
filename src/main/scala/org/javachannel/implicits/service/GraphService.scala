@@ -11,5 +11,5 @@ trait GraphService {
 
   def findOntologyByName(name: String): Option[Ontology]
 
-  def createOntology(name:String):Option[Ontology]
+  def createOntology(name:String, username:String):Option[Ontology]
 }

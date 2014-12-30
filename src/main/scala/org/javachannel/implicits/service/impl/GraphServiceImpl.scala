@@ -11,10 +11,10 @@ class GraphServiceImpl extends GraphService {
   val graphDb = init
 
   def init = {
-    for (t <- Set("Ontology", "Concept", "Reference")) {
+    for (t <- Set("Ontology", "Concept", "Reference", "Audit")) {
       for (i <- Set("id", "name")) {
         println(s"CREATE INDEX ON :$t($i)")
-        Cypher(s"CREATE INDEX ON :$t($i)")
+        Cypher(s"CREATE INDEX ON :$t($i)").execute()
       }
     }
     Neo4jREST
@@ -46,7 +46,15 @@ class GraphServiceImpl extends GraphService {
     } else None
   }
 
-  override def createOntology(name: String): Option[Ontology] = {
+  def addAudit(id:UUID, name:String, notation:String) = {
+    val auditId=UUID.randomUUID()
+    val now=System.currentTimeMillis()
+
+    Cypher(s"create (n:Audit { id:'$auditId', modifiedBy:'$name', notation:'$notation', timestamp:'$now'})").execute()
+    Cypher(s"match (n),(a:Audit) where n.id='$id' and (a.id='$auditId') create (n)-[r:AUDIT]->(a)").execute()
+  }
+
+  override def createOntology(name: String, username:String): Option[Ontology] = {
     val ontology = findOntologyByName(name)
     ontology match {
       case Some(o) => ontology
@@ -55,6 +63,7 @@ class GraphServiceImpl extends GraphService {
         Cypher(
           s"create (n:Ontology { id:{id}, name:{name}})")
           .on("id" -> uuid.toString, "name" -> name).execute()
+        addAudit(uuid, username, "create")
         Option(new Ontology(uuid, name))
     }
   }

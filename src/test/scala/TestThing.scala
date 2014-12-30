@@ -8,7 +8,7 @@ import org.javachannel.implicits.service.impl.GraphServiceImpl
 object TestThing {
   def main(args: Array[String]) {
     val service=new GraphServiceImpl
-    val ontology=service.createOntology("test ontology")
+    val ontology=service.createOntology("test ontology", "Joseph Ottinger")
     println(ontology)
     println(service.findOntologyByName("test ontology"))
   }
